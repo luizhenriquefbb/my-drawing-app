@@ -8,6 +8,21 @@ export enum Tool {
   Selector = "selector",
 }
 
+function rectFromPoints(a: Point, b: Point) {
+  return {
+    x: Math.min(a.x, b.x),
+    y: Math.min(a.y, b.y),
+    w: Math.abs(a.x - b.x),
+    h: Math.abs(a.y - b.y),
+  };
+}
+function pointInRect(pt: Point, rect: { x: number; y: number; w: number; h: number }) {
+  return pt.x >= rect.x && pt.x <= rect.x + rect.w && pt.y >= rect.y && pt.y <= rect.y + rect.h;
+}
+function strokeInRect(stroke: Stroke, rect: { x: number; y: number; w: number; h: number }) {
+  return stroke.points.some((pt) => pointInRect(pt, rect));
+}
+
 export function useCanvasLogic(
   canvasRef: RefObject<HTMLCanvasElement>,
   colorRef: RefObject<HTMLInputElement>
@@ -15,10 +30,12 @@ export function useCanvasLogic(
   const [tool, setTool] = useState<Tool>(Tool.Pencil);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
-  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [color, setColor] = useState<string>("#ff0000");
   const [isDrawing, setIsDrawing] = useState(false);
   const [offset, setOffset] = useState<Point | null>(null);
+  const [selectionRect, setSelectionRect] = useState<{ start: Point; end: Point } | null>(null);
+  const [dragStart, setDragStart] = useState<Point | null>(null);
 
   // Resize canvas to fill window
   useEffect(() => {
@@ -53,7 +70,7 @@ export function useCanvasLogic(
       });
       ctx.stroke();
       // Highlight selected
-      if (tool === Tool.Selector && selectedIndex === i) {
+      if (tool === Tool.Selector && selectedIndices.includes(i)) {
         ctx.save();
         ctx.strokeStyle = "#00f";
         ctx.lineWidth = 5;
@@ -67,12 +84,26 @@ export function useCanvasLogic(
         ctx.restore();
       }
     });
+    // Draw selection rectangle
+    if (tool === Tool.Selector && selectionRect) {
+      const { x, y, w, h } = rectFromPoints(selectionRect.start, selectionRect.end);
+      ctx.save();
+      ctx.strokeStyle = "#00f";
+      ctx.setLineDash([6, 4]);
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.7;
+      ctx.strokeRect(x, y, w, h);
+      ctx.globalAlpha = 0.15;
+      ctx.fillStyle = "#00f";
+      ctx.fillRect(x, y, w, h);
+      ctx.restore();
+    }
   };
 
   // Redraw on strokes/tool/selection change
   useEffect(() => {
     redraw();
-  }, [strokes, tool, selectedIndex]);
+  }, [strokes, tool, selectedIndices, selectionRect]);
 
   // Mouse events
   useEffect(() => {
@@ -85,60 +116,36 @@ export function useCanvasLogic(
         setIsDrawing(true);
         setCurrentStroke([getPos(e)]);
       } else if (tool === Tool.Selector) {
-        // Find stroke under cursor
-        const pos = getPos(e);
-        let found = null;
-        strokes.forEach((stroke, i) => {
-          if (
-            stroke.points.some(
-              (pt) => Math.hypot(pt.x - pos.x, pt.y - pos.y) < 10
-            )
-          ) {
-            found = i;
-          }
-        });
-        setSelectedIndex(found);
-        if (found !== null) {
-          setOffset({
-            x: pos.x - strokes[found].points[0].x,
-            y: pos.y - strokes[found].points[0].y,
-          });
-        } else {
-          setOffset(null);
-        }
+        // Start selection rectangle
+        setSelectionRect({ start: getPos(e), end: getPos(e) });
+        setDragStart(getPos(e));
       }
     };
     const onMove = (e: MouseEvent) => {
       if (tool === Tool.Pencil && isDrawing) {
         setCurrentStroke((s) => [...s, getPos(e)]);
-      } else if (tool === Tool.Selector && selectedIndex !== null && offset) {
-        // Move selected stroke
-        const pos = getPos(e);
-        setStrokes((strokes) =>
-          strokes.map((stroke, i) =>
-            i === selectedIndex
-              ? {
-                  ...stroke,
-                  points: stroke.points.map((pt, j) =>
-                    j === 0
-                      ? { x: pos.x - offset.x, y: pos.y - offset.y }
-                      : {
-                          x: pt.x + (pos.x - offset.x - stroke.points[0].x),
-                          y: pt.y + (pos.y - offset.y - stroke.points[0].y),
-                        }
-                  ),
-                }
-              : stroke
-          )
-        );
+      } else if (tool === Tool.Selector && selectionRect && dragStart) {
+        // Update selection rectangle
+        setSelectionRect((rect) => rect ? { ...rect, end: getPos(e) } : null);
+      } else if (tool === Tool.Selector && selectedIndices.length > 0 && offset) {
+        // Move selected strokes (optional: implement group move)
+        // ...not implemented for group move in this version...
       }
     };
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const onUp = (e: MouseEvent) => {
+    const onUp = () => {
       if (tool === Tool.Pencil && isDrawing) {
         setIsDrawing(false);
         setStrokes((strokes) => [...strokes, { points: currentStroke, color }]);
         setCurrentStroke([]);
+      } else if (tool === Tool.Selector && selectionRect && dragStart) {
+        // Select all strokes within rectangle
+        const rect = rectFromPoints(selectionRect.start, selectionRect.end);
+        const selected = strokes
+          .map((stroke, i) => (strokeInRect(stroke, rect) ? i : null))
+          .filter((i) => i !== null) as number[];
+        setSelectedIndices(selected);
+        setSelectionRect(null);
+        setDragStart(null);
       } else if (tool === Tool.Selector) {
         setOffset(null);
       }
@@ -152,7 +159,7 @@ export function useCanvasLogic(
       window.removeEventListener("mouseup", onUp);
     };
     // eslint-disable-next-line
-  }, [tool, isDrawing, currentStroke, color, strokes, selectedIndex, offset]);
+  }, [tool, isDrawing, currentStroke, color, strokes, selectedIndices, offset, selectionRect, dragStart]);
 
   // Draw current stroke
   useEffect(() => {
@@ -179,20 +186,20 @@ export function useCanvasLogic(
       if (e.key === "F2") setTool(Tool.Selector);
       if (e.key === "F3") {
         setStrokes([]);
-        setSelectedIndex(null);
+        setSelectedIndices([]);
       }
       if (
         e.key === "Backspace" &&
         tool === Tool.Selector &&
-        selectedIndex !== null
+        selectedIndices.length > 0
       ) {
-        setStrokes((strokes) => strokes.filter((_, i) => i !== selectedIndex));
-        setSelectedIndex(null);
+        setStrokes((strokes) => strokes.filter((_, i) => !selectedIndices.includes(i)));
+        setSelectedIndices([]);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [tool, selectedIndex]);
+  }, [tool, selectedIndices]);
 
   // Color picker
   useEffect(() => {
@@ -220,8 +227,8 @@ export function useCanvasLogic(
     color,
     setColor,
     strokes,
-    selectedIndex,
-    setSelectedIndex,
+    selectedIndices,
+    setSelectedIndices,
     cursor,
   };
 }
