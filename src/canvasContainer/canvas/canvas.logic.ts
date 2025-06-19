@@ -1,4 +1,5 @@
-import { useState, useEffect, RefObject, useMemo } from "react";
+import { useState, useEffect, RefObject, useMemo, useContext } from "react";
+import { CanvasContext } from "../canvasContainer.context";
 
 export type Point = { x: number; y: number };
 export type Stroke = { points: Point[]; color: string };
@@ -16,25 +17,36 @@ function rectFromPoints(a: Point, b: Point) {
     h: Math.abs(a.y - b.y),
   };
 }
-function pointInRect(pt: Point, rect: { x: number; y: number; w: number; h: number }) {
-  return pt.x >= rect.x && pt.x <= rect.x + rect.w && pt.y >= rect.y && pt.y <= rect.y + rect.h;
+function pointInRect(
+  pt: Point,
+  rect: { x: number; y: number; w: number; h: number }
+) {
+  return (
+    pt.x >= rect.x &&
+    pt.x <= rect.x + rect.w &&
+    pt.y >= rect.y &&
+    pt.y <= rect.y + rect.h
+  );
 }
-function strokeInRect(stroke: Stroke, rect: { x: number; y: number; w: number; h: number }) {
+function strokeInRect(
+  stroke: Stroke,
+  rect: { x: number; y: number; w: number; h: number }
+) {
   return stroke.points.some((pt) => pointInRect(pt, rect));
 }
 
-export function useCanvasLogic(
-  canvasRef: RefObject<HTMLCanvasElement>,
-  colorRef: RefObject<HTMLInputElement>
-) {
+export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
   const [tool, setTool] = useState<Tool>(Tool.Pencil);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
-  const [color, setColor] = useState<string>("#ff0000");
+  const { color, setColor } = useContext(CanvasContext);
   const [isDrawing, setIsDrawing] = useState(false);
   const [offset, setOffset] = useState<Point | null>(null);
-  const [selectionRect, setSelectionRect] = useState<{ start: Point; end: Point } | null>(null);
+  const [selectionRect, setSelectionRect] = useState<{
+    start: Point;
+    end: Point;
+  } | null>(null);
   const [dragStart, setDragStart] = useState<Point | null>(null);
 
   // Resize canvas to fill window
@@ -86,7 +98,10 @@ export function useCanvasLogic(
     });
     // Draw selection rectangle
     if (tool === Tool.Selector && selectionRect) {
-      const { x, y, w, h } = rectFromPoints(selectionRect.start, selectionRect.end);
+      const { x, y, w, h } = rectFromPoints(
+        selectionRect.start,
+        selectionRect.end
+      );
       ctx.save();
       ctx.strokeStyle = "#00f";
       ctx.setLineDash([6, 4]);
@@ -126,8 +141,12 @@ export function useCanvasLogic(
         setCurrentStroke((s) => [...s, getPos(e)]);
       } else if (tool === Tool.Selector && selectionRect && dragStart) {
         // Update selection rectangle
-        setSelectionRect((rect) => rect ? { ...rect, end: getPos(e) } : null);
-      } else if (tool === Tool.Selector && selectedIndices.length > 0 && offset) {
+        setSelectionRect((rect) => (rect ? { ...rect, end: getPos(e) } : null));
+      } else if (
+        tool === Tool.Selector &&
+        selectedIndices.length > 0 &&
+        offset
+      ) {
         // Move selected strokes (optional: implement group move)
         // ...not implemented for group move in this version...
       }
@@ -159,7 +178,17 @@ export function useCanvasLogic(
       window.removeEventListener("mouseup", onUp);
     };
     // eslint-disable-next-line
-  }, [tool, isDrawing, currentStroke, color, strokes, selectedIndices, offset, selectionRect, dragStart]);
+  }, [
+    tool,
+    isDrawing,
+    currentStroke,
+    color,
+    strokes,
+    selectedIndices,
+    offset,
+    selectionRect,
+    dragStart,
+  ]);
 
   // Draw current stroke
   useEffect(() => {
@@ -193,23 +222,15 @@ export function useCanvasLogic(
         tool === Tool.Selector &&
         selectedIndices.length > 0
       ) {
-        setStrokes((strokes) => strokes.filter((_, i) => !selectedIndices.includes(i)));
+        setStrokes((strokes) =>
+          strokes.filter((_, i) => !selectedIndices.includes(i))
+        );
         setSelectedIndices([]);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [tool, selectedIndices]);
-
-  // Color picker
-  useEffect(() => {
-    const colorInput = colorRef.current;
-    if (!colorInput) return;
-    const onChange = (e: Event) =>
-      setColor((e.target as HTMLInputElement).value);
-    colorInput.addEventListener("input", onChange);
-    return () => colorInput.removeEventListener("input", onChange);
-  }, [colorRef]);
 
   const cursor = useMemo(() => {
     switch (tool) {
