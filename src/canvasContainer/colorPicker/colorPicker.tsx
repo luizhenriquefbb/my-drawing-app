@@ -1,9 +1,10 @@
 import React, { useContext, useRef } from "react";
 import { useColorPickerLogic } from "./colorPicker.logic";
-import { CanvasContext } from "../canvasContainer.context";
+import { CanvasContainerContext } from "../canvasContainer.context";
+import "./colorPicker.styles.css";
 
 const ColorPicker: React.FC = () => {
-  const { color, setColor: onChange } = useContext(CanvasContext);
+  const { color, setColor: onChange } = useContext(CanvasContainerContext);
 
   // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const colorRef = useRef<HTMLInputElement>(null!);

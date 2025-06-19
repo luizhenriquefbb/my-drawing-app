@@ -1,8 +1,8 @@
 import { RefObject, useContext, useEffect } from "react";
-import { CanvasContext } from "../canvasContainer.context";
+import { CanvasContainerContext } from "../canvasContainer.context";
 
 export function useColorPickerLogic(colorRef?: RefObject<HTMLInputElement>) {
-  const { setColor } = useContext(CanvasContext);
+  const { setColor } = useContext(CanvasContainerContext);
   // Color picker
   useEffect(
     (colorRef?: RefObject<HTMLInputElement>) => {

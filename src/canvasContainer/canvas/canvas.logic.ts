@@ -1,5 +1,5 @@
 import { useState, useEffect, RefObject, useMemo, useContext } from "react";
-import { CanvasContext } from "../canvasContainer.context";
+import { CanvasContainerContext } from "../canvasContainer.context";
 
 export type Point = { x: number; y: number };
 export type Stroke = { points: Point[]; color: string };
@@ -40,7 +40,7 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
-  const { color, setColor } = useContext(CanvasContext);
+  const { color } = useContext(CanvasContainerContext);
   const [isDrawing, setIsDrawing] = useState(false);
   const [offset, setOffset] = useState<Point | null>(null);
   const [selectionRect, setSelectionRect] = useState<{
@@ -244,12 +244,6 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
   }, [tool]);
 
   return {
-    setTool,
-    color,
-    setColor,
-    strokes,
-    selectedIndices,
-    setSelectedIndices,
     cursor,
   };
 }

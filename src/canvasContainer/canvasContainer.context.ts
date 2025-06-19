@@ -5,8 +5,8 @@ export type CanvasContextType = {
   setColor: (color: string) => void;
 };
 
-export const CanvasContext = createContext<CanvasContextType>(
+export const CanvasContainerContext = createContext<CanvasContextType>(
   {} as CanvasContextType
 );
 
-export const CanvasProvider = CanvasContext.Provider;
+export const CanvasProvider = CanvasContainerContext.Provider;
