@@ -1,4 +1,4 @@
-import { useState, useEffect, RefObject } from "react";
+import { useState, useEffect, RefObject, useMemo } from "react";
 
 export type Point = { x: number; y: number };
 export type Stroke = { points: Point[]; color: string };
@@ -8,7 +8,10 @@ export enum Tool {
   Selector = "selector",
 }
 
-export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>, colorRef: RefObject<HTMLInputElement>) {
+export function useCanvasLogic(
+  canvasRef: RefObject<HTMLCanvasElement>,
+  colorRef: RefObject<HTMLInputElement>
+) {
   const [tool, setTool] = useState<Tool>(Tool.Pencil);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
@@ -67,7 +70,9 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>, colorRef
   };
 
   // Redraw on strokes/tool/selection change
-  useEffect(() => { redraw(); }, [strokes, tool, selectedIndex]);
+  useEffect(() => {
+    redraw();
+  }, [strokes, tool, selectedIndex]);
 
   // Mouse events
   useEffect(() => {
@@ -84,13 +89,20 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>, colorRef
         const pos = getPos(e);
         let found = null;
         strokes.forEach((stroke, i) => {
-          if (stroke.points.some(pt => Math.hypot(pt.x - pos.x, pt.y - pos.y) < 10)) {
+          if (
+            stroke.points.some(
+              (pt) => Math.hypot(pt.x - pos.x, pt.y - pos.y) < 10
+            )
+          ) {
             found = i;
           }
         });
         setSelectedIndex(found);
         if (found !== null) {
-          setOffset({ x: pos.x - strokes[found].points[0].x, y: pos.y - strokes[found].points[0].y });
+          setOffset({
+            x: pos.x - strokes[found].points[0].x,
+            y: pos.y - strokes[found].points[0].y,
+          });
         } else {
           setOffset(null);
         }
@@ -98,21 +110,34 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>, colorRef
     };
     const onMove = (e: MouseEvent) => {
       if (tool === Tool.Pencil && isDrawing) {
-        setCurrentStroke(s => [...s, getPos(e)]);
+        setCurrentStroke((s) => [...s, getPos(e)]);
       } else if (tool === Tool.Selector && selectedIndex !== null && offset) {
         // Move selected stroke
         const pos = getPos(e);
-        setStrokes(strokes => strokes.map((stroke, i) =>
-          i === selectedIndex
-            ? { ...stroke, points: stroke.points.map((pt, j) => j === 0 ? { x: pos.x - offset.x, y: pos.y - offset.y } : { x: pt.x + (pos.x - offset.x - stroke.points[0].x), y: pt.y + (pos.y - offset.y - stroke.points[0].y) }) }
-            : stroke
-        ));
+        setStrokes((strokes) =>
+          strokes.map((stroke, i) =>
+            i === selectedIndex
+              ? {
+                  ...stroke,
+                  points: stroke.points.map((pt, j) =>
+                    j === 0
+                      ? { x: pos.x - offset.x, y: pos.y - offset.y }
+                      : {
+                          x: pt.x + (pos.x - offset.x - stroke.points[0].x),
+                          y: pt.y + (pos.y - offset.y - stroke.points[0].y),
+                        }
+                  ),
+                }
+              : stroke
+          )
+        );
       }
     };
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const onUp = (e: MouseEvent) => {
       if (tool === Tool.Pencil && isDrawing) {
         setIsDrawing(false);
-        setStrokes(strokes => [...strokes, { points: currentStroke, color }]);
+        setStrokes((strokes) => [...strokes, { points: currentStroke, color }]);
         setCurrentStroke([]);
       } else if (tool === Tool.Selector) {
         setOffset(null);
@@ -131,7 +156,8 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>, colorRef
 
   // Draw current stroke
   useEffect(() => {
-    if (tool !== Tool.Pencil || !isDrawing || currentStroke.length === 0) return;
+    if (tool !== Tool.Pencil || !isDrawing || currentStroke.length === 0)
+      return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -151,9 +177,16 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>, colorRef
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key === "F1") setTool(Tool.Pencil);
       if (e.key === "F2") setTool(Tool.Selector);
-      if (e.key === "F3") { setStrokes([]); setSelectedIndex(null); }
-      if (e.key === "Backspace" && tool === Tool.Selector && selectedIndex !== null) {
-        setStrokes(strokes => strokes.filter((_, i) => i !== selectedIndex));
+      if (e.key === "F3") {
+        setStrokes([]);
+        setSelectedIndex(null);
+      }
+      if (
+        e.key === "Backspace" &&
+        tool === Tool.Selector &&
+        selectedIndex !== null
+      ) {
+        setStrokes((strokes) => strokes.filter((_, i) => i !== selectedIndex));
         setSelectedIndex(null);
       }
     };
@@ -165,18 +198,30 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>, colorRef
   useEffect(() => {
     const colorInput = colorRef.current;
     if (!colorInput) return;
-    const onChange = (e: Event) => setColor((e.target as HTMLInputElement).value);
+    const onChange = (e: Event) =>
+      setColor((e.target as HTMLInputElement).value);
     colorInput.addEventListener("input", onChange);
     return () => colorInput.removeEventListener("input", onChange);
   }, [colorRef]);
 
+  const cursor = useMemo(() => {
+    switch (tool) {
+      case Tool.Pencil:
+        return "crosshair";
+      case Tool.Selector:
+        return "pointer";
+      default:
+        return "default";
+    }
+  }, [tool]);
+
   return {
-    tool,
     setTool,
     color,
     setColor,
     strokes,
     selectedIndex,
     setSelectedIndex,
+    cursor,
   };
 }

@@ -1,27 +1,16 @@
 import React, { useRef } from "react";
-import { useCanvasLogic, Tool } from "./canvas.logic";
+import { useCanvasLogic } from "./canvas.logic";
 import "./canvas.styles.css";
 
 const Canvas: React.FC = () => {
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const canvasRef = useRef<HTMLCanvasElement>(null!);
+  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   const colorRef = useRef<HTMLInputElement>(null!);
-  const { tool, color } = useCanvasLogic(canvasRef, colorRef);
+  const { color, cursor } = useCanvasLogic(canvasRef, colorRef);
 
   return (
     <div id="canvasContainer" className="canvas-container">
-      <canvas
-        ref={canvasRef}
-        id="canvas"
-        className="canvas-main"
-        style={{
-          cursor:
-            tool === Tool.Pencil
-              ? "crosshair"
-              : tool === Tool.Selector
-              ? "pointer"
-              : "default",
-        }}
-      ></canvas>
       <div className="color-picker-wrapper">
         <input
           ref={colorRef}
@@ -32,6 +21,14 @@ const Canvas: React.FC = () => {
           className="color-picker-input"
         />
       </div>
+      <canvas
+        ref={canvasRef}
+        id="canvas"
+        className="canvas-main"
+        style={{
+          cursor,
+        }}
+      ></canvas>
     </div>
   );
 };
