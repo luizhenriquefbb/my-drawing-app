@@ -127,28 +127,55 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
     const getPos = (e: MouseEvent) => ({ x: e.clientX, y: e.clientY });
 
     const onDown = (e: MouseEvent) => {
+      const pos = getPos(e);
       if (tool === Tool.Pencil) {
         setIsDrawing(true);
-        setCurrentStroke([getPos(e)]);
+        setCurrentStroke([pos]);
       } else if (tool === Tool.Selector) {
-        // Start selection rectangle
-        setSelectionRect({ start: getPos(e), end: getPos(e) });
-        setDragStart(getPos(e));
+        // Check if mouse is over a selected stroke
+        let hit = false;
+        for (const idx of selectedIndices) {
+          const stroke = strokes[idx];
+          if (stroke && stroke.points.some(pt => Math.hypot(pt.x - pos.x, pt.y - pos.y) < 8)) {
+            hit = true;
+            break;
+          }
+        }
+        if (selectedIndices.length > 0 && hit) {
+          setOffset(pos);
+        } else {
+          // Start selection rectangle
+          setSelectionRect({ start: pos, end: pos });
+          setDragStart(pos);
+        }
       }
     };
     const onMove = (e: MouseEvent) => {
+      const pos = getPos(e);
       if (tool === Tool.Pencil && isDrawing) {
-        setCurrentStroke((s) => [...s, getPos(e)]);
+        setCurrentStroke((s) => [...s, pos]);
       } else if (tool === Tool.Selector && selectionRect && dragStart) {
         // Update selection rectangle
-        setSelectionRect((rect) => (rect ? { ...rect, end: getPos(e) } : null));
+        setSelectionRect((rect) => (rect ? { ...rect, end: pos } : null));
       } else if (
         tool === Tool.Selector &&
         selectedIndices.length > 0 &&
         offset
       ) {
-        // Move selected strokes (optional: implement group move)
-        // ...not implemented for group move in this version...
+        // Move selected strokes
+        const dx = pos.x - offset.x;
+        const dy = pos.y - offset.y;
+        setStrokes((prev) =>
+          prev.map((stroke, i) =>
+            selectedIndices.includes(i)
+              ? {
+                  ...stroke,
+                  points: stroke.points.map((pt) => ({ x: pt.x + dx, y: pt.y + dy })),
+                }
+              : stroke
+          )
+        );
+        setOffset(pos);
       }
     };
     const onUp = () => {
