@@ -53,9 +53,14 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
   const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
   const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
 
+  const UNDO_LIMIT = 50;
+
   // Helper to push to undo stack
   const pushToUndo = (newStrokes: Stroke[]) => {
-    setUndoStack((stack) => [...stack, strokes]);
+    setUndoStack((stack) => {
+      const next = [...stack, strokes];
+      return next.length > UNDO_LIMIT ? next.slice(1) : next;
+    });
     setRedoStack([]); // clear redo stack on new action
     setStrokes(newStrokes);
   };
@@ -274,7 +279,10 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
       const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
       if (ctrlOrCmd && e.key.toLowerCase() === "z") {
         if (undoStack.length > 0) {
-          setRedoStack((stack) => [...stack, strokes]);
+          setRedoStack((stack) => {
+            const next = [...stack, strokes];
+            return next.length > UNDO_LIMIT ? next.slice(1) : next;
+          });
           setStrokes(undoStack[undoStack.length - 1]);
           setUndoStack((stack) => stack.slice(0, -1));
         }
@@ -283,7 +291,10 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
       }
       if (ctrlOrCmd && e.key.toLowerCase() === "y") {
         if (redoStack.length > 0) {
-          setUndoStack((stack) => [...stack, strokes]);
+          setUndoStack((stack) => {
+            const next = [...stack, strokes];
+            return next.length > UNDO_LIMIT ? next.slice(1) : next;
+          });
           setStrokes(redoStack[redoStack.length - 1]);
           setRedoStack((stack) => stack.slice(0, -1));
         }
