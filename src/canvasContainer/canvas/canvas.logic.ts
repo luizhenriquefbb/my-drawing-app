@@ -49,6 +49,17 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
   } | null>(null);
   const [dragStart, setDragStart] = useState<Point | null>(null);
 
+  // Undo/Redo stacks
+  const [undoStack, setUndoStack] = useState<Stroke[][]>([]);
+  const [redoStack, setRedoStack] = useState<Stroke[][]>([]);
+
+  // Helper to push to undo stack
+  const pushToUndo = (newStrokes: Stroke[]) => {
+    setUndoStack((stack) => [...stack, strokes]);
+    setRedoStack([]); // clear redo stack on new action
+    setStrokes(newStrokes);
+  };
+
   // Resize canvas to fill window
   useEffect(() => {
     const resize = () => {
@@ -136,7 +147,12 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
         let hit = false;
         for (const idx of selectedIndices) {
           const stroke = strokes[idx];
-          if (stroke && stroke.points.some(pt => Math.hypot(pt.x - pos.x, pt.y - pos.y) < 8)) {
+          if (
+            stroke &&
+            stroke.points.some(
+              (pt) => Math.hypot(pt.x - pos.x, pt.y - pos.y) < 8
+            )
+          ) {
             hit = true;
             break;
           }
@@ -170,7 +186,10 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
             selectedIndices.includes(i)
               ? {
                   ...stroke,
-                  points: stroke.points.map((pt) => ({ x: pt.x + dx, y: pt.y + dy })),
+                  points: stroke.points.map((pt) => ({
+                    x: pt.x + dx,
+                    y: pt.y + dy,
+                  })),
                 }
               : stroke
           )
@@ -181,7 +200,9 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
     const onUp = () => {
       if (tool === Tool.Pencil && isDrawing) {
         setIsDrawing(false);
-        setStrokes((strokes) => [...strokes, { points: currentStroke, color }]);
+        if (currentStroke.length > 0) {
+          pushToUndo([...strokes, { points: currentStroke, color }]);
+        }
         setCurrentStroke([]);
       } else if (tool === Tool.Selector && selectionRect && dragStart) {
         // Select all strokes within rectangle
@@ -235,13 +256,44 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
     ctx.stroke();
   }, [currentStroke, isDrawing, color, tool, canvasRef]);
 
+  // Move selected strokes (push to undo stack)
+  useEffect(() => {
+    if (tool === Tool.Selector && offset && selectedIndices.length > 0) {
+      // Save previous state before move
+      setUndoStack((stack) => [...stack, strokes]);
+      setRedoStack([]);
+    }
+    // eslint-disable-next-line
+  }, [offset]);
+
   // Keyboard shortcuts
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // Undo/Redo (Cmd/Ctrl+Z, Cmd/Ctrl+Y)
+      const isMac = navigator.platform.toUpperCase().indexOf("MAC") >= 0;
+      const ctrlOrCmd = isMac ? e.metaKey : e.ctrlKey;
+      if (ctrlOrCmd && e.key.toLowerCase() === "z") {
+        if (undoStack.length > 0) {
+          setRedoStack((stack) => [...stack, strokes]);
+          setStrokes(undoStack[undoStack.length - 1]);
+          setUndoStack((stack) => stack.slice(0, -1));
+        }
+        e.preventDefault();
+        return;
+      }
+      if (ctrlOrCmd && e.key.toLowerCase() === "y") {
+        if (redoStack.length > 0) {
+          setUndoStack((stack) => [...stack, strokes]);
+          setStrokes(redoStack[redoStack.length - 1]);
+          setRedoStack((stack) => stack.slice(0, -1));
+        }
+        e.preventDefault();
+        return;
+      }
       if (e.key === "F1") setTool(Tool.Pencil);
       if (e.key === "F2") setTool(Tool.Selector);
       if (e.key === "F3") {
-        setStrokes([]);
+        pushToUndo([]);
         setSelectedIndices([]);
       }
       if (
@@ -249,15 +301,13 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
         tool === Tool.Selector &&
         selectedIndices.length > 0
       ) {
-        setStrokes((strokes) =>
-          strokes.filter((_, i) => !selectedIndices.includes(i))
-        );
+        pushToUndo(strokes.filter((_, i) => !selectedIndices.includes(i)));
         setSelectedIndices([]);
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [tool, selectedIndices]);
+  }, [tool, selectedIndices, strokes, undoStack, redoStack]);
 
   const cursor = useMemo(() => {
     switch (tool) {

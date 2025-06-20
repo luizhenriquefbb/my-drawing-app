@@ -10,11 +10,14 @@ A cross-platform drawing application built with **Electron** and **React**, desi
 - **Pencil Tool (F1)**: Freehand drawing with your chosen color.
 - **Selector Tool (F2)**: Select, move, and delete strokes.
 - **Clear Canvas (F3)**: Instantly erase all drawings.
+- **Undo/Redo (Cmd/Ctrl+Z, Cmd/Ctrl+Y)**: Step backward and forward through your drawing actions.
 - **Color Picker**: Minimal floating UI to choose your drawing color.
 - **Keyboard Shortcuts**:
   - `F1`: Pencil Tool
   - `F2`: Selector Tool
   - `F3`: Clear Canvas
+  - `Cmd/Ctrl+Z`: Undo
+  - `Cmd/Ctrl+Y`: Redo
   - `Backspace`: Delete selected object(s)
 
 ---
