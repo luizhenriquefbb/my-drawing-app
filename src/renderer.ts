@@ -31,3 +31,34 @@ import './index.css';
 import './app';
 
 console.log('👋 This message is being logged by "renderer.js", included via webpack');
+
+// Listen for request from main process to start Command key listener
+if (window.cmdKeyBridge) {
+  window.cmdKeyBridge.onRequestCmdListener(() => {
+    let isCmdDown = false;
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.metaKey && !isCmdDown) {
+        isCmdDown = true;
+        window.cmdKeyBridge?.notifyCmdKeyState(true);
+      }
+    }
+    function handleKeyUp(e: KeyboardEvent) {
+      if (!e.metaKey && isCmdDown) {
+        isCmdDown = false;
+        window.cmdKeyBridge?.notifyCmdKeyState(false);
+      }
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    // Clean up if needed (not strictly necessary for this app)
+  });
+}
+
+declare global {
+  interface Window {
+    cmdKeyBridge?: {
+      notifyCmdKeyState: (down: boolean) => void;
+      onRequestCmdListener: (callback: () => void) => void;
+    };
+  }
+}
