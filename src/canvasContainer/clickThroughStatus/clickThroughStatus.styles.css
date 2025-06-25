@@ -1,0 +1,23 @@
+.click-through-status {
+  position: fixed;
+  bottom: 16px;
+  right: 50%;
+  transform: translateX(50%);
+  z-index: 9999;
+  background: rgba(30, 30, 30, 0.8);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: sans-serif;
+  pointer-events: none;
+  user-select: none;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+  transition: background 0.2s;
+}
+.click-through-status.active {
+  background: rgba(180, 0, 0, 0.85);
+}
+.click-through-status.inactive {
+  background: rgba(0, 180, 0, 0.85);
+}

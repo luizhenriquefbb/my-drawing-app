@@ -37,11 +37,11 @@ const createWindow = (): void => {
   // Helper to update mouse event handling
   function updateIgnoreMouseEvents() {
     mainWindow.setIgnoreMouseEvents(isClickThrough, { forward: true });
+    mainWindow.webContents.send("click-through-state", isClickThrough);
   }
 
-
   // Listen for click-through toggle from renderer
-  ipcMain.on('toggle-click-through', () => {
+  ipcMain.on("toggle-click-through", () => {
     isClickThrough = !isClickThrough;
     updateIgnoreMouseEvents();
   });
