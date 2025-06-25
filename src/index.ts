@@ -32,23 +32,17 @@ const createWindow = (): void => {
 
   mainWindow.maximize();
 
-  // Make window click-through unless Command is held
-  let isCmdDown = false;
+  let isClickThrough = true; // Start in click-through mode by default
 
   // Helper to update mouse event handling
   function updateIgnoreMouseEvents() {
-    mainWindow.setIgnoreMouseEvents(!isCmdDown, { forward: true });
+    mainWindow.setIgnoreMouseEvents(isClickThrough, { forward: true });
   }
 
-  // Listen for Command key events globally
-  app.on('browser-window-focus', () => {
-    // Listen for keydown/keyup in renderer
-    mainWindow.webContents.send('request-cmd-listener');
-  });
 
-  // Listen for IPC from renderer
-  ipcMain.on('cmd-key-state', (_event: Electron.IpcMainEvent, down: boolean) => {
-    isCmdDown = down;
+  // Listen for click-through toggle from renderer
+  ipcMain.on('toggle-click-through', () => {
+    isClickThrough = !isClickThrough;
     updateIgnoreMouseEvents();
   });
 

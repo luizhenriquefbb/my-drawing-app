@@ -3,10 +3,7 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 
-// Expose a method to listen for Command key requests from main
-contextBridge.exposeInMainWorld('cmdKeyBridge', {
-  notifyCmdKeyState: (down: boolean) => ipcRenderer.send('cmd-key-state', down),
-  onRequestCmdListener: (callback: () => void) => {
-    ipcRenderer.on('request-cmd-listener', callback);
-  }
+// Expose clickThrough toggle to renderer
+contextBridge.exposeInMainWorld('clickThroughBridge', {
+  toggleClickThrough: () => ipcRenderer.send('toggle-click-through')
 });

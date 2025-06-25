@@ -32,33 +32,18 @@ import './app';
 
 console.log('👋 This message is being logged by "renderer.js", included via webpack');
 
-// Listen for request from main process to start Command key listener
-if (window.cmdKeyBridge) {
-  window.cmdKeyBridge.onRequestCmdListener(() => {
-    let isCmdDown = false;
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.metaKey && !isCmdDown) {
-        isCmdDown = true;
-        window.cmdKeyBridge?.notifyCmdKeyState(true);
-      }
-    }
-    function handleKeyUp(e: KeyboardEvent) {
-      if (!e.metaKey && isCmdDown) {
-        isCmdDown = false;
-        window.cmdKeyBridge?.notifyCmdKeyState(false);
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-    // Clean up if needed (not strictly necessary for this app)
-  });
-}
+
+// Listen for 'z' key if not using cmdKeyBridge (in case window focus is lost)
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'z' && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
+    window.clickThroughBridge?.toggleClickThrough();
+  }
+});
 
 declare global {
   interface Window {
-    cmdKeyBridge?: {
-      notifyCmdKeyState: (down: boolean) => void;
-      onRequestCmdListener: (callback: () => void) => void;
+    clickThroughBridge?: {
+      toggleClickThrough: () => void;
     };
   }
 }
