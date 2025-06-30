@@ -5,7 +5,6 @@ import { contextBridge, ipcRenderer } from "electron";
 
 // Expose clickThrough toggle to renderer
 contextBridge.exposeInMainWorld("clickThroughBridge", {
-  toggleClickThrough: () => ipcRenderer.send("toggle-click-through"),
   onStateChange: (callback: (state: boolean) => void) => {
     ipcRenderer.on("click-through-state", (_event, state: boolean) =>
       callback(state)

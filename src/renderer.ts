@@ -34,17 +34,9 @@ console.log(
   '👋 This message is being logged by "renderer.js", included via webpack'
 );
 
-// Listen for 'z' key if not using cmdKeyBridge (in case window focus is lost)
-window.addEventListener("keydown", (e) => {
-  if (e.key === "z" && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey) {
-    window.clickThroughBridge?.toggleClickThrough();
-  }
-});
-
 declare global {
   interface Window {
     clickThroughBridge?: {
-      toggleClickThrough: () => void;
       onStateChange: (callback: (state: boolean) => void) => void;
     };
   }
