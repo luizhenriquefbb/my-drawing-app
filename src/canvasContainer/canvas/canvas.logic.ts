@@ -40,7 +40,7 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [currentStroke, setCurrentStroke] = useState<Point[]>([]);
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
-  const { color } = useContext(CanvasContainerContext);
+  const { color, setColor } = useContext(CanvasContainerContext);
   const [isDrawing, setIsDrawing] = useState(false);
   const [offset, setOffset] = useState<Point | null>(null);
   const [selectionRect, setSelectionRect] = useState<{
@@ -307,6 +307,12 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
         pushToUndo([]);
         setSelectedIndices([]);
       }
+
+      // Color shortcuts
+      if (e.key === "1") setColor("#ff0000"); // Red
+      if (e.key === "2") setColor("#0000ff"); // Blue
+      if (e.key === "3") setColor("#ffff00"); // Yellow
+      if (e.key === "4") setColor("#00ff00"); // Green
       if (
         e.key === "Backspace" &&
         tool === Tool.Selector &&
@@ -317,8 +323,12 @@ export function useCanvasLogic(canvasRef: RefObject<HTMLCanvasElement>) {
       }
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [tool, selectedIndices, strokes, undoStack, redoStack]);
+    // window.addEventListener("keyup", onKeyUp);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      // window.removeEventListener("keyup", onKeyUp);
+    };
+  }, [tool, selectedIndices, strokes, undoStack, redoStack, /* spacePressed, */ setColor]);
 
   const cursor = useMemo(() => {
     switch (tool) {
