@@ -27,6 +27,14 @@ const HelpOverlay: React.FC = () => {
             </div>
 
             <div className="help-section">
+              <h4>Colors</h4>
+              <p><kbd>1</kbd> - Red</p>
+              <p><kbd>2</kbd> - Blue</p>
+              <p><kbd>3</kbd> - Yellow</p>
+              <p><kbd>4</kbd> - Green</p>
+            </div>
+
+            <div className="help-section">
               <h4>Navigation</h4>
               <p><kbd>Mouse Wheel</kbd> - Zoom In/Out</p>
               <p><kbd>Middle Mouse</kbd> - Pan Canvas</p>
